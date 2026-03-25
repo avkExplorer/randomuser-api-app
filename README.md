@@ -5,6 +5,102 @@ A Gradle-based Spring Boot application that integrates with the **RandomUser.me 
 - **Base URL:** `http://localhost:8083`
 - **External API:** [RandomUser.me](https://randomuser.me)
 - **Port:** `8083`
+- **Swagger UI:** `http://localhost:8083/swagger-ui/index.html`
+- **OpenAPI JSON:** `http://localhost:8083/api-docs`
+
+---
+
+## Swagger UI
+
+This project ships with **springdoc-openapi** (`v1.7.0`), which auto-generates a fully interactive API explorer from the controller's OpenAPI annotations.
+
+### Access URLs (once the app is running)
+
+| Resource | URL |
+|---|---|
+| Swagger UI (interactive) | http://localhost:8083/swagger-ui/index.html |
+| OpenAPI JSON spec | http://localhost:8083/api-docs |
+| OpenAPI YAML spec | http://localhost:8083/api-docs.yaml |
+
+### Swagger UI Endpoint Map
+
+```mermaid
+flowchart TD
+    UI["Swagger UI\nhttp://localhost:8083/swagger-ui/index.html"]
+    UI --> Tag["📂 Random Users tag\n8 endpoints"]
+
+    Tag --> R1["GET /api/users/random\n?count={n}"]
+    Tag --> R2["GET /api/users/random/nationality/{nat}"]
+    Tag --> R3["GET /api/users"]
+    Tag --> R4["GET /api/users/{id}"]
+    Tag --> R5["GET /api/users/search\n?country={c}"]
+    Tag --> R6["POST /api/users"]
+    Tag --> R7["PUT /api/users/{id}"]
+    Tag --> R8["DELETE /api/users/{id}"]
+
+    R1 -->|"count=5 → fetches 5 users\nfrom RandomUser.me"| External["🌐 RandomUser.me API"]
+    R2 -->|"nat=IN → fetches\nIndian users"| External
+    R3 -->|"Lists stored users"| Store[("In-Memory Store")]
+    R4 -->|"Gets one by ID"| Store
+    R5 -->|"Filters by country"| Store
+    R6 -->|"Adds manually"| Store
+    R7 -->|"Updates stored"| Store
+    R8 -->|"Removes from store"| Store
+```
+
+### Try-It-Out Workflow
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant SW as Swagger UI
+    participant App as Spring Boot App
+    participant RU as RandomUser.me
+
+    Dev->>SW: Open Swagger UI on port 8083
+    SW-->>Dev: Shows "Random Users" section with 8 endpoints
+
+    Note over Dev,RU: Step 1 — Seed the store
+    Dev->>SW: Expand GET /api/users/random → Try it out
+    Dev->>SW: Set count = 5 → Execute
+    SW->>App: GET /api/users/random?count=5
+    App->>RU: GET https://randomuser.me/api/?results=5
+    RU-->>App: 5 random user objects (nested JSON)
+    App-->>SW: 200 OK — 5 RandomUser objects stored + returned
+    SW-->>Dev: See parsed user data with local IDs 1-5
+
+    Note over Dev,App: Step 2 — Browse & manage
+    Dev->>SW: Expand GET /api/users → Execute
+    SW->>App: GET /api/users
+    App-->>SW: All 5 stored users
+    Dev->>SW: Expand PUT /api/users/{id} → Try it out
+    Dev->>SW: id=1, updated JSON body → Execute
+    App-->>SW: 200 OK — updated user
+    Dev->>SW: Expand DELETE /api/users/{id} → id=1 → Execute
+    App-->>SW: 200 OK — user deleted
+```
+
+### Swagger Configuration (application.properties)
+
+```properties
+springdoc.api-docs.path=/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+springdoc.swagger-ui.tagsSorter=alpha
+springdoc.swagger-ui.try-it-out-enabled=true
+```
+
+### Annotation Reference
+
+| Annotation | Applied To | Purpose |
+|---|---|---|
+| `@Tag` | Controller class | Groups all 8 endpoints under "Random Users" in the UI |
+| `@Operation` | Each method | One-line summary + detailed description shown when expanded |
+| `@ApiResponses` | Each method | Documents 200 / 201 / 404 / 500 with body schemas |
+| `@Parameter` | Path/query params | Describes `count`, `nat`, `country`, `id` with examples |
+| `@RequestBody` (OAS) | POST/PUT body | Schema + pre-filled JSON example for user creation/update |
+| `@ExampleObject` | Inside content | Injects realistic JSON into Swagger's "Example Value" panel |
+| `@Schema` | Model reference | Links response body to the `ApiResponse` or `RandomUser` class |
 
 ---
 
